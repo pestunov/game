@@ -9,110 +9,75 @@ Created on Mon Nov 16 08:16:12 2020
 import pygame as pg
 import os
 
-from gamelevels import levels, cellMap
-
-WIDTH = 512
-HEIGHT = 336
-FPS = 50
-PIX_FOR_BRIX = 16
-STEPS_FOR_CYCLE = 16
-N_STEP_FOR_TEST = 5
-BLACK = (0, 0, 0)
-BKGR = (0, 0, 0)
-
-step_n = 0
-
-goLeft = goRight = goUp = goDown = False
-
-cur_folder = os.path.dirname(__file__)
-img_folder = os.path.join(cur_folder, 'images')
+from characters import Cell, Player
+from gamelevels import *
+from gameconst import *
 
 
-class Cell(pg.sprite.Sprite):
-    def __init__(self, xx, yy, img):
-        pg.sprite.Sprite.__init__(self)
-        self.xx = xx
-        self.yy = yy
-        self.image = img
-        self.image.set_colorkey(BKGR)
-        self.rect = self.image.get_rect(topleft=(self.xx, self.yy))
+CUR_FOLDER = os.path.dirname(__file__)
+IMG_FOLDER = os.path.join(CUR_FOLDER, 'images')
 
-
-class Player(Cell):
-    def __init__(self, xx, yy, img):
-        super().__init__(xx, yy, img)
-        self.speedX = 0
-        self.speedY = 0
-        self.goLeft = False
-        self.goRight = False
-        self.goUp = False
-        self.goDown = False
-        
-    def update(self):
-        if self.goRight:
-            self.speedX = 1
-            self.speedY = 0
-        elif self.goLeft:
-            self.speedX = -1
-            self.speedY = 0
-        elif self.goUp:
-            self.speedX = 0
-            self.speedY = -1
-        elif self.goDown:
-            self.speedX = 0
-            self.speedY = 1
-        else:
-            if self.xx % PIX_FOR_BRIX == 0:
-                self.speedX = 0
-            if self.yy % PIX_FOR_BRIX == 0:
-                self.speedY = 0
-        self.xx += self.speedX
-        self.yy += self.speedY
-        self.rect.x = self.xx
-        self.rect.y = self.yy
-        bumpsI = self.rect.collidelist(brickRectsGroup)
-        if bumpsI != -1:
-            self.xx -= self.speedX
-            self.yy -= self.speedY
-            bricksGroup.remove(bumpsI)
 
 def worldCreate(arr):
+    wallGroup = pg.sprite.Group()
+    prixGroup = pg.sprite.Group()
+    enemyGroup = pg.sprite.Group()
     for _i in range(len(arr)):
         for _j in range(len(arr[_i])):
             cmi = arr[_i][_j]
-            cm = cellMap[cmi]
-            brick = Cell(_j*16, _i*16, imgKit[cm])
-            bricksGroup.add(brick)
-            if (cmi==' ') or (cmi=='t'):
-                pass
-            else:
-                brickRectsGroup.append(brick.rect)
-    bricksGroup.draw(mainScreen)
+            cm = imgMap[cmi]
+            brick = Cell(_j*16, _i*16, imgKit[cm], cmi)
+            if cmi == 'b' or cmi == 'c':
+                wallGroup.add(brick)
+            elif cmi == 't' or cmi == 'd':
+                prixGroup.add(brick)
+    return wallGroup, prixGroup, enemyGroup
+            
+def worldPhisics(hero):
+    res = pg.sprite.spritecollide(hero, wallGroup, dokill = False)
+    if len(res) != 0:
+        if hero.goRight:
+            hero.goRight = False
+    res = pg.sprite.spritecollide(hero, prixGroup, dokill = True)
+    
+    for i in res:
+        print(i.tag, end='')
+    pass
+#     whoCollide = hero0.rect.collidelist(brickRectsList)
+#     if whoCollide != -1:
+#         if bricksList[whoCollide].tag == 'b':
+#             print('.', end='')
+#             hero0.xx -= hero0.speedX
+#             hero0.yy -= hero0.speedY
+#         if bricksList[whoCollide].tag == 't':
+#             bricksList[whoCollide].destroy()
+#             brickRectsList[whoCollide] = None
+#             print('tyns')
+            
 
+
+################################
 
 ### Let's Game to be started ###
+
+################################
+            
 pg.init()
-mainScreen = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption('Hello pygame')
-
+mainScreen = pg.display.set_mode((WIDTH, HEIGHT))
 clock = pg.time.Clock()
-
-imge = pg.image.load(os.path.join(img_folder, 'colored_packed.png')).convert_alpha()
-BKGR = imge.get_at((0, 0))
+imge = pg.image.load(os.path.join(IMG_FOLDER, 'colored_packed.png')).convert_alpha()
 imgKit = []
 for i in range(22):
     for j in range(48):
         imgKit.append(imge.subsurface(j*16, i*16, 16, 16))
 
-herosGroup = pg.sprite.Group()
+
 player1 = Player(16, 16, imgKit[25])
 
-herosGroup.add(player1)
-
-
-bricksGroup = pg.sprite.Group()
-brickRectsGroup = []
-worldCreate(levels[0])
+brickRectsList = []
+bricksList = []
+wallGroup, prixGroup, enemyGroup = worldCreate(levels[0])
 
 # Цикл игры
 game = True
@@ -141,9 +106,12 @@ while game:
         elif e.type == pg.KEYUP and e.key == pg.K_DOWN:
             player1.goDown = False
 
-    bricksGroup.draw(mainScreen)
-    herosGroup.update()
-    herosGroup.draw(mainScreen)
+    player1.update()
+    worldPhisics(player1)
+    wallGroup.draw(mainScreen)
+    prixGroup.draw(mainScreen)
+    enemyGroup.draw(mainScreen)
+    player1.draw(mainScreen)
     pg.display.flip()
 
 
