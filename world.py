@@ -1,39 +1,49 @@
-#!/usr/bin/python3
-"""
-Created on Mon Nov 16 08:16:12 2020
-
-@author: Phil
-"""
-
-import pygame as pg
-import os
+from random import randint as rand
+import math
+import pygame
 
 from gameconst import *
+from trees import Tree
+from animal import Animal
 
-from trees import Tree, World
 
-CUR_FOLDER = os.path.dirname(__file__)
-IMG_FOLDER = os.path.join(CUR_FOLDER, 'images')
+class World:
+    def __init__(self, w, h, screen):
+        self.width = w
+        self.height = h
+        self.screen = screen
+        self.area = self.width * self.height
+        self.trees_list = [0 for _ in range(self.area)]
+        self.fert_list = [0 for _ in range(self.area)]
 
-pg.init()
-pg.display.set_caption('Hello pygame')
-mainScreen = pg.display.set_mode((WIDTH, HEIGHT))
-clock = pg.time.Clock()
+    def seed(self, quantity):
+        for i in range(quantity):
+            x = rand(0, self.width)
+            y = rand(0, self.height)
+            self._plant_seed(x, y)
 
-world = World(CELLS_WIDTH, CELLS_HEIGHT, mainScreen)
-world.seed(3)
+    def step(self):
+        for i, item in enumerate(self.trees_list):
+            if type(item) == Tree:
+                if item.telomera <= 0:
+                    self.trees_list[i] = 0
+                    continue
+                item.grow()
+                for _ in range(item.have_seeds):
+                    x = item.x + rand(-2, 2)
+                    y = item.y + rand(-2, 2)
+                    self._plant_seed(x, y)
 
-# Цикл игры
-game = True
-while game:
-    for e in pg.event.get():
-        # check for closing window
-        if e.type == pg.QUIT or (e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE):
-            game = False
-    world.step()
-    # Keep tempo
-    clock.tick(FPS)
-    pg.display.flip()
+                item.show(self.screen)
 
-pg.quit()
-
+    def _plant_seed(self, x, y):
+        while x < 0:
+            x = CELLS_WIDTH + x
+        while x >= CELLS_WIDTH:
+            x = x - CELLS_WIDTH
+        while y < 0:
+            y = CELLS_HEIGHT + y
+        while y >= CELLS_HEIGHT:
+            y = y - CELLS_HEIGHT
+        if type(self.trees_list[y * CELLS_WIDTH + x]) != Tree:
+            self.trees_list[y * CELLS_WIDTH + x] = Tree(x ,y)
